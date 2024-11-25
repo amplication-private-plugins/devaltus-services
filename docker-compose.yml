@@ -1,17 +1,21 @@
-name: "seed-terraform"
-
 services:
-  ubuntu:
-    image: ghcr.io/3clife-org/images.devcontainer.ubuntu:0.1.2
+  java:
+    build: 
+      context: .
+      target: java
+    working_dir: /usr/src/app
+    ports:
+      - "8080:8080"
     volumes:
-      - .:/workspace
-    command: sleep infinity
-    privileged: true
+      - .:/usr/src/app
+      - maven_cache:/root/.m2
+    entrypoint: /bin/bash
+    command: -c "sleep infinity"
 
   terraform:
     image: hashicorp/terraform:latest
     volumes:
-      - .:/workspace
+      - ./terraform:/workspace
       - ~/.aws:/root/.aws
       - ~/.gitconfig:/root/.gitconfig
       - ~/.ssh:/root/.ssh
@@ -21,8 +25,14 @@ services:
       - AWS_ACCESS_KEY_ID
       - AWS_SECRET_ACCESS_KEY
       - AWS_SESSION_TOKEN
+      - TF_VAR_tf_state_bucket
+      - TF_VAR_tf_state_key_infra
+      - TF_VAR_image_tag
 
   tflint:
     image: ghcr.io/terraform-linters/tflint:latest
     volumes:
       - .:/data
+
+volumes:
+  maven_cache: null

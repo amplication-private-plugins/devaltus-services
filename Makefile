@@ -1,9 +1,19 @@
-PROJECT_NAME = seed.rest-api.micronaut.infra
+PROJECT_NAME ?= seed.rest-api.micronaut
+PROJECT_ARTIFACT = pets-api
+API_NAME = ${PROJECT_ARTIFACT}
 
-TF_WORKSPACE ?= local
-TF_STATE_BUCKET ?= 
+IMAGE_REGISTRY ?=localhost
+IMAGE_NAME ?= ${PROJECT_NAME}
+IMAGE_TAG ?=latest
 
-AWS_REGION ?= us-east-1
+PLATFORM ?= linux/arm64,linux/amd64
+
+export AWS_REGION ?= us-east-1
+export TF_WORKSPACE ?= local
+export TF_STATE_BUCKET ?=
+export TF_VAR_tf_state_bucket ?= ${TF_STATE_BUCKET}
+export TF_VAR_tf_state_key_infra = applications/${PROJECT_NAME}.infra/terraform.tfstate
+export TF_VAR_image_tag ?= ${IMAGE_TAG}
 
 ##
 # Functions
@@ -41,43 +51,82 @@ define run_shell
 		$(1)
 endef
 
-.PHONY: help shell ubuntu-shell validate init plan apply test lint
-
 default: help
 
 help:		## Show help menu
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-shell: ## Start bash session inside the Terraform image
+## -------------------------------------- Build Targets --------------------------------------
+
+build:		## Build the application
+	@docker compose build
+	@docker compose run --rm --entrypoint mvn java clean package
+
+build-native: build	## Build the native image
+	@docker buildx build --provenance=false --output type=docker --build-arg ARTIFACT_ID=${PROJECT_ARTIFACT} . -t ${IMAGE_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
+
+build-native-multiarch:	## Build the native image for multiple architectures
+	@docker buildx build --provenance=false --output type=docker --platform ${PLATFORM} --build-arg ARTIFACT_ID=${PROJECT_ARTIFACT} . -t ${IMAGE_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
+
+## -------------------------------------- Run Targets --------------------------------------
+
+shell: build	## Start bash session inside the Java container
+	@docker compose run --rm --entrypoint /bin/bash java
+
+develop: build		## Start the application in development mode
+	@docker compose run --rm --service-ports --entrypoint mvn java clean mn:run 
+
+test: build	## Run the tests
+	@docker compose run --rm --entrypoint mvn java test
+
+serve: build-native	## Serve the natively compiled application
+	@docker run --rm -p 8080:8080 ${IMAGE_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
+
+release: build-native	## Build and push the native image to the registry
+	@docker push ${IMAGE_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
+
+which-version:
+	@docker compose run --rm --entrypoint mvn java help:evaluate -DforceStdout -Dexpression=project.version -q | awk 'NR==1{print}'
+
+which-project:
+	@echo ${PROJECT_NAME}
+
+which-ecr-repo: pull-infra-state
+	@cat infra.tfstate | jq -r '.outputs.repository_url.value'
+
+pull-infra-state:
+	@aws s3 cp s3://${TF_STATE_BUCKET}/${TF_VAR_tf_state_key_infra} infra.tfstate > /dev/null
+
+## -------------------------------------- Terraform Targets --------------------------------------
+tf-clean: ## Clean the Terraform configuration
+	@docker-compose run --rm --entrypoint /bin/sh terraform -c "rm -rf .terraform || true"
+
+tf-shell: ## Start bash session inside the Terraform image
 	$(call run_shell,terraform,"/bin/sh")
 
-ubuntu-shell: ## Start bash session inside the devcontainer base image
-	$(call run_command_in_container,ubuntu,"/bin/bash")
-
-validate: ## Validate the Terraform configuration
+tf-validate: ## Validate the Terraform configuration
 	$(call run_command_in_container,terraform,validate)
 
-init: ## Initializes Terraform (run terraform init)
-	$(call run_command_in_container,terraform,init -reconfigure $(shell make get_opts_backend))
+tf-init: ## Initializes Terraform (run terraform init)
+	$(call run_command_in_container,terraform,init --upgrade -reconfigure $(shell make get_opts_backend))
 
-plan: ## Run terraform plan
+tf-plan: ## Run terraform plan
 	$(call run_command_in_container,terraform,plan $(shell make get_opts_tfvars))
 
-apply: ## Apply the Terraform configuration
+tf-apply: ## Apply the Terraform configuration
 	$(call run_command_in_container,terraform,apply -auto-approve $(shell make get_opts_tfvars))
 
-destroy: ## Destroy the Terraform configuration
+tf-destroy: ## Destroy the Terraform configuration
 	$(call run_command_in_container,terraform,destroy -auto-approve $(shell make get_opts_tfvars))
 
-output: ## Show the Terraform output
+tf-output: ## Show the Terraform output
 	$(call run_command_in_container,terraform,output)
 
-test: ## Run the test suite
+tf-test: ## Run the test suite
 	$(call run_command_in_container,terraform,test)
 
-lint: ## Lint the terraform code
+tf-lint: ## Lint the terraform code
 	$(call run_command_in_container,tflint)
-
 
 get_opts_tfvars: ## Get the tfvars options
 	@if [ -z "$(TF_WORKSPACE)" ]; then \
@@ -87,7 +136,7 @@ get_opts_tfvars: ## Get the tfvars options
 	fi
 
 get_opts_backend: ## Get the backend-config options
-	@if [ -f "override.tf" ]; then \
+	@if [ -f "terraform/override.tf" ]; then \
 		echo ""; \
 	elif [ -z "$(TF_STATE_BUCKET)" ]; then \
 		echo "-backend=false"; \

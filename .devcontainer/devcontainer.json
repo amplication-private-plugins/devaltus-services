@@ -1,0 +1,22 @@
+{
+	"name": "Java DevContainer",
+	
+	"service": "java",
+	
+	"workspaceFolder": "/usr/src/app",
+	"shutdownAction": "stopCompose",
+	"overrideCommand": true,
+	"dockerComposeFile": [
+		"../docker-compose.yml"
+	],
+
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"vscjava.vscode-java-pack",
+				"github.copilot"
+			]
+		}
+	}
+	
+}
