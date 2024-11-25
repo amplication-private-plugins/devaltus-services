@@ -1,0 +1,28 @@
+micronaut:
+  application:
+    name: pets-api
+    
+  router:
+    static-resources:
+      swagger:
+        paths: classpath:META-INF/openapi
+        mapping: /**
+      swagger-ui:
+        paths: classpath:META-INF/swagger/views/swagger-ui
+        mapping: /swagger-ui/**
+
+  server:
+    port: 8080
+    
+  ## https://micronaut-projects.github.io/micronaut-openapi/latest/guide/#configuration
+  openapi:
+    enabled: true    
+    target:
+      file: src/main/resources/META-INF/openapi/openapi.yaml
+    property:
+      naming:
+        strategy: KEBAB_CASE   
+    views:
+      spec: swagger-ui.enabled=true,mapping.path=/       
+
+

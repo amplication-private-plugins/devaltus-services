@@ -1,29 +1,40 @@
+# Seed REST API with Micronaut
 
-# Terraform Module Seed Project
+This project is a seed REST API built using the [Micronaut Framework](https://micronaut.io/). This repository provides a starting point for developing RESTful services with Micronaut. 
 
-This repository provides a starting point for writing Terraform modules, with automated testing using the Terraform `test` framework, and linting support via `tflint`. All required tools are provided via Docker containers, managed by `docker-compose`, ensuring a consistent environment across different systems.
+## Project Structure
 
-## Table of Contents
-- [Terraform Module Seed Project](#terraform-module-seed-project)
-  - [Table of Contents](#table-of-contents)
-  - [Features](#features)
-  - [Dependencies](#dependencies)
-  - [Project Structure](#project-structure)
-  - [Usage](#usage)
-  - [Testing](#testing)
-    - [Linting](#linting)
-    - [Plan \& Apply](#plan--apply)
-  - [Contributing](#contributing)
-  - [Contact](#contact)
+```
+/
+├── src
+│   ├── main
+│   │   ├── java
+│   │   │   ├── controllers
+│   │   │   ├── models
+│   │   │   ├── repositories
+│   │   │   └── services
+│   │   └── resources
+│   └── test
+│       ├── java
+│       └── resources
+├── Makefile
+├── README.md
+└── pom.xml
+```
+- `src/main/java/controllers`: Contains the controller classes that handle HTTP requests and responses.
+- `src/main/java/models`: Contains the model classes that represent the data structures.
+- `src/main/java/repositories`: Contains the repository classes that interact with the database.
+- `src/main/java/services`: Contains the service classes that contain business logic.
+- `src/main/resources`: Contains configuration files and other resources.
+- `src/test/java`: Contains test code.
+- `src/test/resources`: Contains test resources.
+- `Makefile`: Contains commands to build and manage the project.
+- `pom.xml`: Maven build configuration file.
 
-## Features
 
-- **Automated Testing**: Using the [Terraform `test` framework](https://developer.hashicorp.com/terraform/language/tests) to validate and test Terraform modules.
-- **Linting**: Integrated with [TFLint](https://github.com/terraform-linters/tflint) to enforce best practices and catch common mistakes in Terraform code.
-- **Dockerized Environment**: All dependencies are handled via Docker, eliminating the need to install Terraform or TFLint on your local machine.
-- **Modular Setup**: Easily extend the seed project to build custom Terraform modules.
+## Local Development
 
-## Dependencies
+### Dependencies
 
 This project requires the following dependencies, to install the necessary dependencies on OSX, follow these steps:
 
@@ -39,153 +50,21 @@ This project requires the following dependencies, to install the necessary depen
       brew install make
       ```
 
-## Local Backend
-To override the remote backend configuration, you can create an `override.tf` file in the root of your project. This file will contain the backend configuration that you want to override. 
+### Usage
 
-```hcl
-terraform {
-  backend "local" {
-    path = "terraform.tfstate"
-  }
-}
+The `Makefile` includes several commands to help manage the project. One of the most useful commands is the `help` target, which provides a list of available commands to build, run, and test your application locally.
+
+To see the list of available commands, you can run:
+
+```sh
+make help
 ```
 
-By using `override.tf`, you can customize the backend configuration without modifying the main configuration files, making it easier to manage different state for local deployments to sandbox.
 
-## Project Structure
+## GraalVM
 
-```bash
-.
-├── main.tf              # Example Terraform module
-├── variables.tf         # Input variables
-├── outputs.tf           # Output values
-├── tests/               # Directory for Terraform tests
-│   └── example_test.tftest.hcl  # Example test cases
-├── .tflint.hcl          # TFLint configuration
-├── docker-compose.yml   # Docker services for Terraform and TFLint
-├── Makefile             # Automation commands for linting and testing
-└── README.md            # Project documentation (this file)
-```
+To develop and test the Micronaut application locally, use the `make develop` command, which provides a fast and flexible environment suited for rapid iteration. This setup allows you to make changes and test them quickly during development.
 
-## Usage
+However, the app is intended to be compiled into native code with GraalVM and deployed on AWS Lambda for improved performance and reduced cold start times. To ensure stability and compatibility, it’s recommended to also test the application locally in its native form. 
 
-1. **Clone the repository:**
-
-   ```bash
-   git clone git@github.com:3clife-org/seed.terraform.git
-   cd seed.terraform
-   ```
-
-   This command starts up containers for Terraform and TFLint, which will be used for the various tasks.
-
-2. **Available Make Commands:**
-
-   - **View available `make` targets**
-
-   To view a list of all available make targets you can run the following command:
-
-    ```bash
-    make help
-    ```
-
-    - **Run Tests:**
-
-    To run the Terraform tests:
-
-    ```bash
-    make test
-    ```
-
-    - **Lint Terraform Code:**
-
-    To lint the Terraform files using TFLint:
-
-    ```bash
-     make lint
-    ```
-
-   - **Run Terraform Plan:**
-
-    To generate and show an execution plan for the Terraform configuration:
-
-    ```bash
-    make plan
-    ```
-
-   - **Apply Terraform Configuration:**
-
-    To apply the Terraform configuration to your infrastructure:
-
-    ```bash
-    make apply
-    ```
-
-## Testing
-
-The tests are located in the `tests/` folder. Each test is written in `.tftest.hcl` files and executed with the `terraform test` command. The tests use assertions to verify the module's output and expected behavior.
-
-Example test file:
-
-```hcl
-provider "aws" {
-  region = "us-west-2"
-}
-
-variables {
-  bucket_name = "my-test-bucket"
-}
-
-run "validate_s3_bucket" {
-  command = "plan"
-
-  assert {
-    condition     = aws_s3_bucket.example.bucket == var.bucket_name
-    error_message = "S3 bucket name does not match"
-  }
-}
-```
-
-To run the tests:
-
-```bash
-make test
-```
-
-### Linting
-
-[TFLint](https://github.com/terraform-linters/tflint) is used to enforce Terraform best practices. You can customize the linting rules in the `.tflint.hcl` file.
-
-To run linting:
-
-```bash
-make lint
-```
-
-### Plan & Apply
-
-You can generate and view the Terraform plan using:
-
-```bash
-make plan
-```
-
-To apply the Terraform configuration:
-
-```bash
-make apply
-```
-
-## Contributing
-Instructions for contributing to the project.
-
-1. Create a new branch (`git checkout -b feature-branch`).
-2. Commit your changes (`git commit -m 'Add some feature'`).
-3. Push to the branch (`git push origin feature-branch`).
-4. Open a pull request.
-
-## Contact
-Contact information for the project maintainers.
-
-- Name: Jarrod Bellmore
-- Email: [jbellmore@3clife.info](mailto:jbellmore@3dlife.info)
-- GitHub: [Jarrod Bellmore](https://github.com/jbellmore_3CLife)
+Run the `make serve` command to compile the application into a native executable and verify its behavior as it would run in AWS Lambda. This step helps catch potential issues early, ensuring that the natively compiled code performs as expected before deployment.
