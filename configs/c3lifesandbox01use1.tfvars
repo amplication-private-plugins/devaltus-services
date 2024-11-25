@@ -1,2 +1,2 @@
 name="pets-service"
-target_env="c3lifesandbox01use1"
+target_env="my-env"
