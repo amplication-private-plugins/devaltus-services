@@ -1,0 +1,28 @@
+name: "seed-terraform"
+
+services:
+  ubuntu:
+    image: ghcr.io/3clife-org/images.devcontainer.ubuntu:0.1.2
+    volumes:
+      - .:/workspace
+    command: sleep infinity
+    privileged: true
+
+  terraform:
+    image: hashicorp/terraform:latest
+    volumes:
+      - .:/workspace
+      - ~/.aws:/root/.aws
+      - ~/.gitconfig:/root/.gitconfig
+      - ~/.ssh:/root/.ssh
+    working_dir: /workspace
+    environment:
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_SESSION_TOKEN
+
+  tflint:
+    image: ghcr.io/terraform-linters/tflint:latest
+    volumes:
+      - .:/data

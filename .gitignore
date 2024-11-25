@@ -1,0 +1,16 @@
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+# Ignore any plan output files
+*.tfplan
+
+# Ignore .terraformrc and terraform.rc files
+.terraformrc
+terraform.rc
+.DS_Store
+
+override.tf

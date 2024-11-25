@@ -1,0 +1,38 @@
+name: CI
+
+on: [ push, pull_request ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest-arm
+
+    permissions:
+      id-token: write 
+      contents: read   
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Fetching GitHub App token to access private repositories
+      uses: actions/create-github-app-token@v1
+      id: tf-modules-auth
+      with:
+        app-id: ${{ secrets.TF_MODULES_APP_ID }}
+        private-key: ${{ secrets.TF_MODULES_PK }}
+        owner: ${{ github.repository_owner }}
+
+    - name: Configure git client to use GitHub App token
+      run:  git config --global url."https://x-access-token-:${{ steps.tf-modules-auth.outputs.token }}@github.com/".insteadOf "ssh://git@github.com/"
+
+    - name: Initialize Terraform
+      run: make init
+
+    - name: Lint Code
+      run: make lint
+
+    - name: Validate Terraform Configuration
+      run: make validate
+
+    - name: Run Tests
+      run: make test
